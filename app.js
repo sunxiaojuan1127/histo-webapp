@@ -837,6 +837,11 @@
       ds.style.display = "";
       var fcb = $("facetCb"), fi = fcb ? fcb.checked : null;
       var grid = (fig.layout && fig.layout.grid) ? fig.layout.grid.rows + "x" + fig.layout.grid.columns : "无";
+      var hist = (window.__diagLog && window.__diagLog.length > 1)
+        ? "<br>📜 facetCb 变化轨迹: " + window.__diagLog.map(function (e) {
+            return "t=" + e.t + "ms:<b>" + e.facetCb + "</b>";
+          }).join(" → ")
+        : "";
       ds.innerHTML =
         "🔍 <b>调试</b> &nbsp;·&nbsp; " +
         "facetCb DOM:" + (fcb ? "<b>" + fi + "</b>" : "未找到") + " &nbsp;|&nbsp; " +
@@ -844,7 +849,10 @@
         "binMode:<b>" + cfg.binMode + "</b> &nbsp;|&nbsp; " +
         "选中组:<b>" + entries.length + "</b> &nbsp;|&nbsp; " +
         "布局:<b>" + grid + "</b> &nbsp;|&nbsp; " +
-        "标题:<b>" + (fig.layout && fig.layout.title && fig.layout.title.text ? fig.layout.title.text : "(无)") + "</b>";
+        "标题:<b>" + (fig.layout && fig.layout.title && fig.layout.title.text ? fig.layout.title.text : "(无)") + "</b>" +
+        hist;
+      window.__diag = { facetCb: fi, cfgFacet: cfg.facet, binMode: cfg.binMode, n: entries.length, grid: grid,
+                        title: (fig.layout && fig.layout.title && fig.layout.title.text) || "" };
     } else {
       $("diagStatus").style.display = "none";
     }
@@ -1176,5 +1184,18 @@
       $("facetCb").click();
       console.log("[selftest] after click, facetCb.checked=" + $("facetCb").checked);
     }, 1500);
+  }
+  /* 实时诊断: ?debug=1 时每秒采样 facetCb, 记录状态变化轨迹到 window.__diagLog */
+  if (/[?&]debug=1\b/.test(location.search)) {
+    window.__diagLog = [{ t: 0, facetCb: $("facetCb").checked }];
+    var t0 = Date.now();
+    setInterval(function () {
+      var cur = $("facetCb").checked;
+      var last = window.__diagLog[window.__diagLog.length - 1];
+      if (cur !== last.facetCb) {
+        window.__diagLog.push({ t: Date.now() - t0, facetCb: cur });
+        console.log("[diag] facetCb changed to " + cur + " at t=" + (Date.now() - t0) + "ms");
+      }
+    }, 100);
   }
 })();
