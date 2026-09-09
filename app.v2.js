@@ -1169,4 +1169,12 @@
       $("curveSmoothLevelVal").textContent = sv;
     }
   }
+  /* 自检模式: ?selftest=1 加载后 1.5s 自动点击 facetCb, 模拟用户手动点击, 验证响应 */
+  if (/[?&]selftest=1/.test(location.search)) {
+    setTimeout(function () {
+      console.log("[selftest] before click, facetCb.checked=" + $("facetCb").checked);
+      $("facetCb").click();
+      console.log("[selftest] after click, facetCb.checked=" + $("facetCb").checked);
+    }, 1500);
+  }
 })();
