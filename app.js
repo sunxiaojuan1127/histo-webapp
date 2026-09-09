@@ -820,6 +820,8 @@
     if (!S.rows || S.rowIdx === null || S.colIdx === null) return;
     if (S.metricIdx < 0) { toast("没有可用数值列"); return; }
     var cfg = readCfg();
+    console.log("[render] facetCb=" + $("facetCb").checked + " cfg.facet=" + cfg.facet +
+      " binMode=" + cfg.binMode + " n=" + S.selected.length);
     var entries = C.extractByGroup(S.rows, S.labels, S.metricIdx, S.selected);
     /* 应用分组名重命名映射 (仅展示用, 内部 select 仍用原名) */
     entries.forEach(function (e) { e.label = applyRename(e.label, S.groupRenameMap); });
@@ -968,6 +970,7 @@
       $("facetHVal").textContent = $("facetH").value; scheduleRender();
     });
     $("facetCb").addEventListener("change", function () {
+      console.log("[facetCb] change → checked=" + $("facetCb").checked);
       updateControlVisibility(); scheduleRender();
     });
     $("axLogCb").addEventListener("change", scheduleRender);
