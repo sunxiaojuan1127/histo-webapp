@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>分组直方图分析 · 网页版</title>
+<style>
+  :root{
+    --bg:#f3f5fa; --panel:#ffffff; --line:#e3e8f2; --line2:#d5dcec;
+    --text:#1c2438; --muted:#66728c; --accent:#2563eb; --accent-soft:#eaf1fe;
+    --ok:#16a34a; --warn:#d97706; --radius:10px; --shadow:0 1px 3px rgba(20,30,60,.06);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",Roboto,Helvetica,Arial,sans-serif;
+    font-size:14px; line-height:1.55;
+  }
+  button{font-family:inherit}
+  input,select,textarea{font-family:inherit}
+
+  /* ---------- 顶栏 ---------- */
+  header.top{
+    background:#fff; border-bottom:1px solid var(--line);
+    padding:10px 22px; display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    position:sticky; top:0; z-index:50;
+  }
+  header.top .logo{font-size:18px; font-weight:700; letter-spacing:.3px}
+  header.top .logo small{font-weight:400; color:var(--muted); font-size:12px; margin-left:8px}
+  .badge{
+    font-size:12px; padding:3px 10px; border-radius:99px; background:var(--accent-soft);
+    color:#1d4ed8; border:1px solid #c9dcfc; white-space:nowrap;
+  }
+  .badge.off{background:#fff7ed; color:#b45309; border-color:#fde5c2}
+  .spacer{flex:1}
+
+  /* ---------- 布局 ---------- */
+  .layout{display:flex; align-items:flex-start; gap:16px; padding:16px 18px 40px}
+  aside.panel{
+    width:330px; flex:0 0 330px; background:var(--panel);
+    border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow);
+    padding:0; max-height:calc(100vh - 90px); overflow-y:auto; position:sticky; top:66px;
+  }
+  main{flex:1; min-width:0}
+  @media (max-width:1020px){
+    .layout{flex-direction:column}
+    aside.panel{width:100%; flex:1 1 auto; max-height:none; position:static}
+  }
+
+  /* ---------- 面板分区 ---------- */
+  .sec{border-bottom:1px solid var(--line); padding:13px 15px}
+  .sec:last-child{border-bottom:none}
+  .sec h3{
+    margin:0 0 10px; font-size:12px; text-transform:uppercase; letter-spacing:.6px;
+    color:var(--muted); display:flex; align-items:center; gap:6px;
+  }
+  .sec h3 .num{
+    width:18px;height:18px;border-radius:50%;background:var(--accent);color:#fff;
+    display:inline-flex;align-items:center;justify-content:center;
+    font-size:11px; text-transform:none;
+  }
+  .row{display:flex; gap:8px; align-items:center; margin:6px 0; flex-wrap:wrap}
+  .grow{flex:1; min-width:0}
+  label.lbl{font-size:12px; color:var(--muted); display:block; margin:8px 0 3px}
+  label.lbl:first-child{margin-top:0}
+
+  /* ---------- 控件 ---------- */
+  textarea{
+    border:1px solid var(--line2); border-radius:7px; padding:6px 8px;
+    font-size:13px; background:#fff; color:var(--text); width:100%;
+    font-family:ui-monospace,SFMono-Regular,"SF Mono",Consolas,"Liberation Mono",Menlo,monospace;
+    white-space:pre; overflow-x:auto;
+  }
+  input[type=text],input[type=number],select{
+    border:1px solid var(--line2); border-radius:7px; padding:6px 8px;
+    font-size:13px; background:#fff; color:var(--text); width:100%;
+  }
+  input[type=text]:focus,input[type=number]:focus,select:focus{outline:2px solid #b9d2ff; border-color:var(--accent)}
+  input[type=number].small{width:100%}
+  .btn{
+    border:1px solid var(--line2); background:#fff; color:var(--text);
+    padding:6px 12px; border-radius:7px; cursor:pointer; font-size:13px;
+  }
+  .btn:hover{background:#f3f6fd}
+  .btn.primary{background:var(--accent); border-color:var(--accent); color:#fff}
+  .btn.primary:hover{background:#1d4ed8}
+  .btn.mini{padding:3px 8px; font-size:12px}
+  .btn:disabled{opacity:.5; cursor:not-allowed}
+  .drop{
+    border:1.6px dashed #b7c4dd; border-radius:9px; padding:16px 10px; text-align:center;
+    color:var(--muted); cursor:pointer; transition:.15s; background:#fbfcff;
+  }
+  .drop:hover,.drop.over{border-color:var(--accent); background:var(--accent-soft); color:#1d4ed8}
+  .drop b{color:var(--accent); font-weight:600}
+  .fileinfo{font-size:12px; color:var(--muted); margin-top:6px; word-break:break-all}
+  .radio{display:flex; align-items:center; gap:6px; margin:5px 0; font-size:13px; cursor:pointer}
+  .radio input{accent-color:var(--accent); width:15px; height:15px; margin:0}
+  .rad{display:inline-flex; align-items:center; gap:4px; font-size:13px; cursor:pointer; padding:3px 8px; border:1px solid var(--line2); border-radius:6px; background:#fff}
+  .rad input{accent-color:var(--accent); margin:0}
+  .chk{display:flex; align-items:center; gap:7px; margin:6px 0; font-size:13px; cursor:pointer}
+  .chk input{accent-color:var(--accent); width:15px; height:15px; margin:0}
+  .chip{border:1px solid var(--line2); border-radius:99px; padding:3px 11px; font-size:12px; cursor:pointer; user-select:none; background:#fff}
+  .chip.on{background:var(--accent); border-color:var(--accent); color:#fff}
+  .glist{max-height:170px; overflow-y:auto; border:1px solid var(--line); border-radius:8px; padding:6px 8px; margin-top:4px; background:#fbfcff}
+  .glist .gi{display:flex; align-items:center; gap:7px; padding:2.5px 2px; font-size:13px; cursor:pointer; border-radius:5px}
+  .glist .gi:hover{background:#eef3fd}
+  .glist .gi input{accent-color:var(--accent); width:14px; height:14px; margin:0}
+  .glist .gi .n{color:var(--muted); font-size:11px; margin-left:auto}
+  .hint{font-size:11.5px; color:var(--muted); margin-top:4px}
+  details.adv{border-top:1px dashed var(--line)}
+  details.adv summary{cursor:pointer; padding:10px 15px; font-size:13px; color:var(--text); font-weight:600; list-style:none}
+  details.adv summary::-webkit-details-marker{display:none}
+  details.adv summary::before{content:"▸ "; color:var(--muted)}
+  details.adv[open] summary::before{content:"▾ "}
+  details.adv .inner{padding:0 15px 12px}
+  .rangeval{font-size:12px; color:var(--muted); min-width:44px; text-align:right}
+  input[type=range]{width:100%; accent-color:var(--accent)}
+  .twocol{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+
+  /* ---------- 主区 ---------- */
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+        box-shadow:var(--shadow); padding:14px 16px; margin-bottom:14px}
+  .empty{
+    text-align:center; padding:56px 20px; color:var(--muted);
+  }
+  .empty .big{font-size:44px; margin-bottom:12px}
+  .empty h2{color:var(--text); font-size:20px; margin:0 0 8px}
+  .steps{display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin:20px auto 8px; max-width:760px}
+  .step{flex:1; min-width:200px; background:#fff; border:1px solid var(--line); border-radius:10px; padding:14px}
+  .step .snum{width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;
+      display:inline-flex;align-items:center;justify-content:center;font-weight:700;margin-bottom:8px}
+  .step h4{margin:0 0 4px; font-size:14px}
+  .step p{margin:0; font-size:12px; color:var(--muted)}
+  #plot{width:100%}
+  .statwrap{margin-top:4px}
+  table.stat{border-collapse:collapse; width:100%; font-size:12.5px}
+  table.stat th,table.stat td{border:1px solid var(--line); padding:5px 8px; text-align:right; white-space:nowrap}
+  table.stat th{background:#f4f7fd; position:sticky; top:0}
+  table.stat td:first-child,table.stat th:first-child{text-align:left; font-weight:600}
+  .sumstrip{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px}
+  .sumstrip .chip{border-color:var(--line2)}
+  .toast{
+    position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+    background:#111a30; color:#fff; padding:10px 18px; border-radius:9px; font-size:13px;
+    opacity:0; pointer-events:none; transition:.25s; z-index:99; max-width:80vw;
+  }
+  .toast.show{opacity:.96}
+  .err{color:#dc2626; font-size:12.5px; background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:8px 10px; margin:6px 0}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="logo">🔬 分组直方图 / 分布分析 <small>网页版 · 无需安装</small></div>
+  <span class="badge" id="privBadge">🔒 数据只在你的浏览器里计算，不上传任何服务器</span>
+  <div class="spacer"></div>
+  <span class="badge off" id="fileState">未加载数据</span>
+</header>
+
+<div class="layout">
+
+  <!-- ================= 左控制面板 ================= -->
+  <aside class="panel" id="panel">
+
+    <!-- 第 1 步 数据 -->
+    <div class="sec">
+      <h3><span class="num">1</span> 上传 Excel 数据</h3>
+      <div class="drop" id="dropZone">
+        把 <b>.xlsx</b> 文件拖到这里<br>或 <b>点击选择文件</b>
+        <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none">
+      </div>
+      <div class="fileinfo" id="fileInfo"></div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn mini" id="loadSampleBtn" type="button">✨ 载入示例数据体验</button>
+      </div>
+    </div>
+
+    <!-- 手动指定分组列（自动识别失败时出现） -->
+    <div class="sec" id="manualGroupSec" style="display:none">
+      <h3>分组列未识别到，请手动指定</h3>
+      <label class="lbl">行标识列 (如 E / A)：</label>
+      <select id="rowSelect"></select>
+      <label class="lbl">列标识列 (如 7 / 12)：</label>
+      <select id="colSelect"></select>
+    </div>
+
+    <!-- 第 2 步 分组 -->
+    <div class="sec">
+      <h3><span class="num">2</span> 选择分组 <span id="groupCount" class="hint" style="margin-left:auto"></span></h3>
+      <div class="row">
+        <button class="btn mini" id="allBtn" type="button">全选</button>
+        <button class="btn mini" id="noneBtn" type="button">清空</button>
+        <input type="text" id="groupSearch" placeholder="搜索分组，如 E-7" style="flex:1; min-width:100px">
+      </div>
+      <div class="glist" id="groupList"></div>
+
+      <details class="adv" id="renameSec" style="margin-top:10px">
+        <summary>🔤 编辑分组名称</summary>
+        <div class="inner">
+          <div class="hint" style="margin:0 0 6px">每行一条 <code>原名=新名</code>，留空表示还原。只影响图表与统计表显示，<b>不改动原数据</b>。例如把 <code>E-7</code> 显示成 <code>对照组A</code>。</div>
+          <textarea id="renameText" rows="4" placeholder="E-7=对照组A&#10;F-12=处理组B"></textarea>
+          <div class="row" style="margin-top:6px">
+            <button class="btn mini" id="renameApplyBtn" type="button">✓ 应用命名</button>
+            <button class="btn mini" id="renameResetBtn" type="button">↺ 重置全部</button>
+            <span id="renameApplied" class="hint"></span>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <!-- 第 3 步 指标 -->
+    <div class="sec">
+      <h3><span class="num">3</span> 选择指标 &amp; 出图</h3>
+      <label class="lbl">指标列（分析对象）</label>
+      <select id="metricSelect"></select>
+
+      <details class="adv" id="hdrRenameSec" style="margin-top:8px">
+        <summary>🧾 编辑指标列显示名</summary>
+        <div class="inner">
+          <div class="hint" style="margin:0 0 6px">把长表头缩成易读名。例如 <code>Nuclei Selected - Ratio_Int_555</code> → <code>通道555比值</code>，图表标题、坐标轴都立刻跟着换。</div>
+          <textarea id="hdrRenameText" rows="3" placeholder="Nuclei Selected - Ratio_Int_555=通道555比值"></textarea>
+          <div class="row" style="margin-top:6px">
+            <button class="btn mini" id="hdrRenameApplyBtn" type="button">✓ 应用</button>
+            <button class="btn mini" id="hdrRenameResetBtn" type="button">↺ 重置</button>
+            <span id="hdrRenameApplied" class="hint"></span>
+          </div>
+        </div>
+      </details>
+
+      <label class="lbl">图表类型</label>
+      <select id="kindSelect">
+        <option value="hist_percent" selected>直方图 - 百分比</option>
+        <option value="hist_freq">直方图 - 频数</option>
+        <option value="hist_cum">直方图 - 累计百分比</option>
+        <option value="violin">小提琴图</option>
+        <option value="box">箱线图</option>
+      </select>
+
+      <details class="adv" id="plotTitleSec" style="margin-top:8px">
+        <summary>📝 编辑图表标题</summary>
+        <div class="inner">
+          <div class="hint" style="margin:0 0 6px">留空 = 用默认标题（指标名 + 分组方式）。可以写成自己想要的，比如「通道555比值 - 实验A vs 实验B」「Day3 染核强度比较」等。</div>
+          <input type="text" id="plotTitleInput" placeholder="默认: {指标名} — 按 Row-Column 分组">
+          <div class="row" style="margin-top:6px">
+            <button class="btn mini" id="plotTitleApplyBtn" type="button">✓ 应用标题</button>
+            <button class="btn mini" id="plotTitleResetBtn" type="button">↺ 用默认</button>
+            <span id="plotTitleApplied" class="hint"></span>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <!-- 分箱 -->
+    <div class="sec" id="binSec">
+      <h3>分箱方式（直方图）</h3>
+      <label class="radio"><input type="radio" name="binMode" value="auto" checked> 自动推荐 (IQR 法则)</label>
+      <label class="radio"><input type="radio" name="binMode" value="step"> 按固定步长</label>
+      <div class="row" id="stepRow" style="display:none">
+        <div class="grow"><input type="number" id="binStep" value="0.1" min="1e-9" step="any"></div>
+        <button class="btn primary mini" id="suggestBtn" type="button" title="按当前数据自动算最佳步长并填入">⚡ 建议</button>
+      </div>
+
+      <label class="radio"><input type="radio" name="binMode" value="pieces"> 按分段步长（不同区间用不同步长）</label>
+      <div id="piecesRow" style="display:none">
+        <div class="hint" style="margin:6px 0">每行一段：<code>起始 结束 步长</code>（空格或逗号分隔）。<br>
+        示例：<code>0 1 0.1</code> 表示 [0,1] 用 0.1 步长；<code>1 2 0.2</code> 表示 [1,2] 用 0.2；<code>2 20 2</code> 表示 [2,20] 用 2。段间会无缝衔接。</div>
+        <textarea id="binSegText" rows="4" placeholder="0 1 0.1&#10;1 2 0.2&#10;2 20 2"></textarea>
+        <div class="row" style="margin-top:6px">
+          <button class="btn mini primary" id="binSegApplyBtn" type="button">✓ 应用</button>
+          <button class="btn mini" id="binSegResetBtn" type="button">↺ 清空</button>
+          <select id="binSegTplSel" style="flex:0 0 auto; width:auto">
+            <option value="">📋 加载模板…</option>
+            <option value="user">用户示例: 1-2 用 0.2, 2-20 用 2</option>
+            <option value="fine_low">低值细粒度（对数尺度）</option>
+            <option value="fluo_0_10">细胞荧光（0~10 适合）</option>
+            <option value="wide_0_100">宽范围（0~100）</option>
+            <option value="log3_3">对数范围（1e-3 ~ 1e3）</option>
+          </select>
+        </div>
+        <div id="binSegHint" class="hint"></div>
+        <div id="piecesOverlayHint" class="hint" style="margin-top:8px;padding:7px 10px;background:#FFF7E6;border-radius:6px;border-left:3px solid #FAAD14;display:none">💡 提示：多组数据范围差异较大时（叠加模式）柱子会重叠看不清楚，建议同时启用 ① <b>子图模式(Facet)</b> 让每组分开显示，② <b>每子图 X 轴自动按主体范围显示</b> 裁剪极端值</div>
+        <div style="margin-top:10px">
+          <label class="lbl">曲线平滑度（仅分段步长模式生效）</label>
+          <div class="row">
+            <input type="range" id="curveSmoothLevel" min="0" max="100" step="1" value="30">
+            <span class="rangeval" id="curveSmoothLevelVal">30</span>
+          </div>
+          <div class="hint" style="margin-top:3px">0=纯折线（贴柱顶）&nbsp;·&nbsp;100=完全平滑样条（沿柱顶）</div>
+        </div>
+      </div>
+
+      <label class="radio"><input type="radio" name="binMode" value="count"> 按固定柱数</label>
+      <div class="row" id="countRow" style="display:none">
+        <input type="range" id="binCount" min="5" max="200" value="50">
+        <span class="rangeval" id="binCountVal">50</span>
+      </div>
+    </div>
+
+    <!-- 显示方式 / 曲线 -->
+    <div class="sec" id="curveSec">
+      <h3>显示方式（直方图）</h3>
+      <label class="radio"><input type="radio" name="showMode" value="both" checked> 柱子 + 平滑曲线</label>
+      <label class="radio"><input type="radio" name="showMode" value="curve"> 只看平滑曲线</label>
+      <label class="radio"><input type="radio" name="showMode" value="bars"> 只看柱子</label>
+      <label class="lbl" id="bwLbl">曲线平滑程度</label>
+      <div class="row">
+        <input type="range" id="smoothBw" min="0.1" max="3" step="0.05" value="1">
+        <span class="rangeval" id="smoothBwVal">1.00</span>
+      </div>
+      <label class="lbl">多组叠加方式</label>
+      <label class="radio"><input type="radio" name="stackMode" value="overlay" checked> 半透明叠加（对比形状）</label>
+      <label class="radio"><input type="radio" name="stackMode" value="stack"> 堆叠（看总量构成）</label>
+    </div>
+
+    <!-- 子图模式 -->
+    <div class="sec" id="facetSec">
+      <h3>子图模式 (Facet)</h3>
+      <label class="chk"><input type="checkbox" id="facetCb"> 每个分组一张独立子图
+        <span class="hint" style="margin:0">（组间数值范围差异大时最清晰）</span></label>
+      <div id="facetOpts" style="display:none">
+        <label class="chk"><input type="checkbox" id="facetAutoStepCb" checked> 每组子图自动选各自合适的步长</label>
+        <label class="chk"><input type="checkbox" id="facetClipAutoCb" checked> 每子图 X 轴自动按主体范围显示 <span class="hint" style="margin:0">（按 (P低 ~ P高) 裁掉极端 outlier，让主体分布清晰；超出范围的散点不会被画进柱形图）</span></label>
+        <div class="row" id="facetClipRow">
+          <span style="font-size:12px;color:var(--muted)">裁切下限</span>
+          <input type="range" id="facetClipLo" min="0" max="5" step="0.1" value="0.5" style="flex:1">
+          <span class="rangeval" id="facetClipLoVal">0.5%</span>
+          <span style="font-size:12px;color:var(--muted);margin-left:8px">上限</span>
+          <input type="range" id="facetClipHi" min="95" max="100" step="0.1" value="99.5" style="flex:1">
+          <span class="rangeval" id="facetClipHiVal">99.5%</span>
+        </div>
+        <label class="lbl">每行几张子图（数字越小，子图越宽越高）</label>
+        <div class="row" id="facetColsRow">
+          <label class="rad"><input type="radio" name="facetCols" value="1"> 1</label>
+          <label class="rad"><input type="radio" name="facetCols" value="2"> 2</label>
+          <label class="rad"><input type="radio" name="facetCols" value="3" checked> 3</label>
+          <label class="rad"><input type="radio" name="facetCols" value="4"> 4</label>
+        </div>
+        <label class="lbl">每张子图高度 <span class="hint" style="margin:0">（总高 = 行数 × 此值 + 顶部标题）</span></label>
+        <div class="row">
+          <input type="range" id="facetH" min="140" max="500" step="10" value="250">
+          <span class="rangeval" id="facetHVal">250</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 高级设置 -->
+    <details class="adv" id="adv">
+      <summary>⚙️ 高级设置</summary>
+      <div class="inner">
+
+        <label class="lbl" id="axLabel">数值轴范围（X 轴）</label>
+        <label class="radio"><input type="radio" name="axMode" value="auto" checked> 自动</label>
+        <label class="radio"><input type="radio" name="axMode" value="clip"> 按百分位裁切（去掉极端值）</label>
+        <div class="row" id="clipRow" style="display:none">
+          <span style="font-size:12px;color:var(--muted)">裁掉两端最极端的</span>
+          <input type="range" id="clipPct" min="0.1" max="10" step="0.1" value="1" style="flex:1">
+          <span class="rangeval" id="clipPctVal">1%</span>
+        </div>
+        <label class="radio"><input type="radio" name="axMode" value="manual"> 手动输入范围</label>
+        <div class="twocol" id="manualRow" style="display:none">
+          <div><label class="lbl">最小值</label><input type="number" id="axMin" step="any"></div>
+          <div><label class="lbl">最大值</label><input type="number" id="axMax" step="any"></div>
+        </div>
+        <label class="chk"><input type="checkbox" id="axLogCb"> 数值轴用对数刻度 <span class="hint">（值跨数量级如 0.2~60 时勾上）</span></label>
+        <div class="hint" id="axRangeHint"></div>
+
+        <div id="ySec">
+          <label class="lbl">柱高轴范围（Y 轴，可选）</label>
+          <div class="twocol">
+            <div><label class="lbl">最小值</label><input type="number" id="yMin" step="any"></div>
+            <div><label class="lbl">最大值</label><input type="number" id="yMax" step="any"></div>
+          </div>
+          <label class="chk"><input type="checkbox" id="yLogCb"> Y 轴用对数刻度</label>
+        </div>
+
+        <label class="lbl">配色方案</label>
+        <select id="paletteSelect"></select>
+        <label class="chk"><input type="checkbox" id="sameColorCb"> 所有组用同一个颜色</label>
+        <div class="row" id="colorRow" style="display:none">
+          <input type="color" id="colorPick" value="#2563eb" style="width:46px;height:30px;padding:2px;border:1px solid var(--line2);border-radius:6px">
+        </div>
+
+        <label class="chk"><input type="checkbox" id="statCb" checked> 在图下方显示统计表</label>
+      </div>
+    </details>
+  </aside>
+
+  <!-- ================= 主展示区 ================= -->
+  <main>
+    <div class="card" id="emptyCard">
+      <div class="empty">
+        <div class="big">📊</div>
+        <h2>上传 Excel，三步看图</h2>
+        <div class="steps">
+          <div class="step"><div class="snum">1</div><h4>上传数据</h4><p>把含 <b>Row</b> / <b>Column</b> 两列（作为分组）的 Excel 拖进来，或点「载入示例数据」。</p></div>
+          <div class="step"><div class="snum">2</div><h4>选分组</h4><p>勾选要比的分组（如 E-7、F-12），每个分组 = 一个 Row-Column 组合。</p></div>
+          <div class="step"><div class="snum">3</div><h4>选指标看分布</h4><p>在下拉里选一个数值指标（如 Ratio_Int_555），立刻出直方图 / 平滑曲线 / 小提琴图。</p></div>
+        </div>
+        <p style="margin-top:22px;font-size:12.5px;color:var(--muted)">文件格式：Excel 第一行是表头；数值列至少含一个数字即可绘制。<br>
+        鼠标悬停图上的柱子/曲线可以看具体数值，右上角工具栏可以缩放、保存图片。</p>
+      </div>
+    </div>
+
+    <div class="card" id="chartCard" style="display:none">
+      <div class="sumstrip" id="sumStrip"></div>
+      <div id="plot"></div>
+    </div>
+
+    <div class="card statwrap" id="statCard" style="display:none">
+      <h3 style="margin:2px 0 8px;font-size:14px;color:var(--text)">📋 分组统计表</h3>
+      <div id="statBox" style="overflow:auto; max-height:420px"></div>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="lib/xlsx.full.min.js"></script>
+<script src="lib/plotly.min.js"></script>
+<script src="histo-core.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
