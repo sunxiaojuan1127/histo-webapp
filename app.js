@@ -828,6 +828,25 @@
     var fig = buildPlot(entries, cfg);
     if (fig.error) { toast(fig.error); return; }
 
+    /* 诊断面板: ?debug=1 时显示, 包含 facetCb 真实状态 / cfg.facet / grid 布局 / 当前标题,
+     * 帮助排查 "勾了 checkbox 但不生效" 类问题 */
+    if (/[?&]debug=1\b/.test(location.search)) {
+      var ds = $("diagStatus");
+      ds.style.display = "";
+      var fcb = $("facetCb"), fi = fcb ? fcb.checked : null;
+      var grid = (fig.layout && fig.layout.grid) ? fig.layout.grid.rows + "x" + fig.layout.grid.columns : "无";
+      ds.innerHTML =
+        "🔍 <b>调试</b> &nbsp;·&nbsp; " +
+        "facetCb DOM:" + (fcb ? "<b>" + fi + "</b>" : "未找到") + " &nbsp;|&nbsp; " +
+        "cfg.facet:<b>" + cfg.facet + "</b> &nbsp;|&nbsp; " +
+        "binMode:<b>" + cfg.binMode + "</b> &nbsp;|&nbsp; " +
+        "选中组:<b>" + entries.length + "</b> &nbsp;|&nbsp; " +
+        "布局:<b>" + grid + "</b> &nbsp;|&nbsp; " +
+        "标题:<b>" + (fig.layout && fig.layout.title && fig.layout.title.text ? fig.layout.title.text : "(无)") + "</b>";
+    } else {
+      $("diagStatus").style.display = "none";
+    }
+
     Plotly.react($("plot"), fig.data, fig.layout, { responsive: true, displaylogo: false });
 
     // 摘要条
