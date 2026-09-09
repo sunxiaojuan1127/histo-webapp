@@ -1198,4 +1198,20 @@
       }
     }, 100);
   }
+  /* 步骤引导: ?wizard=1 显示三步操作提示横幅, 引导用户重现并诊断 */
+  if (/[?&]wizard=1/.test(location.search)) {
+    setTimeout(function () {
+      var w = document.createElement("div");
+      w.id = "wizardBanner";
+      w.innerHTML =
+        "<div style='position:fixed;top:0;left:0;right:0;background:#FAAD14;color:#fff;padding:10px 16px;z-index:9999;font-size:13px;line-height:1.6;box-shadow:0 2px 8px rgba(0,0,0,0.2)'>" +
+        "🧪 <b>诊断模式</b> &nbsp;|&nbsp; " +
+        "1) 等示例数据加载完（约 1-2 秒）<br>" +
+        "2) 在左侧 <b>「子图模式 (FACET)」</b> 区，手动勾选 <b>「每个分组一张独立子图」</b> checkbox<br>" +
+        "3) 看下面黄色诊断条的变化（会显示 facetCb 真实状态 + cfg.facet + 布局 + 标题）<br>" +
+        "4) 截图发给我（包含黄色诊断条）" +
+        "</div>";
+      document.body.appendChild(w);
+    }, 200);
+  }
 })();
